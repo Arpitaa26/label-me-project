@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>LabelMe Web Annotation Tool</title>
 
@@ -37,7 +38,7 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
             max-width: 900px;
             margin: auto;
         }
@@ -60,18 +61,20 @@
             border: 2px dashed #6c757d;
             margin: 30px auto;
             display: block;
-           background-color: transparent;
-           margin-left: 176px;
+            background-color: transparent;
+            margin-left: 176px;
         }
 
-    .save-btn {
-    margin-top: 50px;
-}
-.d-flex.align-items-center {
-    margin-top: 17px !important;
-}
+        .save-btn {
+            margin-top: 50px;
+        }
+
+        .d-flex.align-items-center {
+            margin-top: 17px !important;
+        }
     </style>
 </head>
+
 <body>
     <h1>Image Annotation Tool</h1>
 
@@ -88,18 +91,23 @@
             <button type="submit" class="btn btn-primary">Upload</button>
         </div>
     </form>
-     <div class="container">
-       <div class="row">
-        <div class="canvas-box">
-            <canvas id="canvas" width="800" height="600"  style=" margin-left: 176px !important;"></canvas>
-        </div>
-         
+    <div class="container">
+        <div class="row">
+            <div>
+                <button onclick="activateRect()">Rectangle</button>
+                <button onclick="activatePoly()">Polygon</button>
+            </div>
+            <div class="canvas-box">
+                <canvas id="canvas" width="800" height="600" style=" margin-left: 176px !important;"></canvas>
+            </div>
 
-   <div class="save-btn">
-     <button onclick="saveAnnotation()" class="btn btn-success">Save Annotation</button>
-   </div>
-       </div>
-     </div>
-   
+
+            <div class="save-btn">
+                <button onclick="saveAnnotation()" class="btn btn-success">Save Annotation</button>
+            </div>
+        </div>
+    </div>
+
 </body>
+
 </html>
