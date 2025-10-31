@@ -308,6 +308,156 @@ function activatePoly(){
     alert("Polygon draw mode enabled. Click to add points, double click to finish.");
 }
 
+function deleteP() {
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+        canvas.remove(activeObject);
+    }
+}
+
+
+
+
+let undoStack = [];
+
+canvas.on('object:added', function(e) {
+    if (e.target && e.target.type !== 'image') {
+        undoStack.push(e.target);
+    }
+});
+
+function duplicatePolygon() {
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) {
+        alert("Please select a polygon to duplicate.");
+        return;
+    }
+
+    activeObject.clone(function(clone) {
+        clone.set({
+            left: activeObject.left + 20,
+            top: activeObject.top + 20
+        });
+        const newLabel = prompt("Enter label for duplicated polygon:", activeObject.label || "object");
+        clone.label = newLabel || activeObject.label || "object";
+        canvas.add(clone);
+        canvas.setActiveObject(clone);
+        canvas.renderAll();
+    });
+}
+
+
+function undoAction() {
+    if (undoStack.length === 0) {
+        alert("Nothing to undo!");
+        return;
+    }
+
+    const lastObj = undoStack.pop();
+    if (canvas.getObjects().includes(lastObj)) {
+        canvas.remove(lastObj);
+        canvas.renderAll();
+    }
+}
+
+
+
+// ======================================================
+// POLYGON VERTEX EDITING (LabelMe-style)
+// ======================================================
+
+let vertexCircles = [];
+let editingPolygon = null;
+
+function enablePolygonEditing(polygon) {
+    disablePolygonEditing(); // remove previous edit mode
+    editingPolygon = polygon;
+
+    // Calculate transform matrix once
+    const matrix = polygon.calcTransformMatrix();
+    const pathOffset = polygon.pathOffset || { x: 0, y: 0 };
+
+    polygon.get('points').forEach((p, index) => {
+        // Convert local vertex coordinates to absolute canvas coordinates
+        const localPoint = new fabric.Point(p.x - pathOffset.x, p.y - pathOffset.y);
+        const absolutePoint = fabric.util.transformPoint(localPoint, matrix);
+
+        const circle = new fabric.Circle({
+            left: absolutePoint.x,
+            top: absolutePoint.y,
+            radius: 5,
+            fill: 'yellow',
+            stroke: 'black',
+            strokeWidth: 1,
+            hasControls: false,
+            hasBorders: false,
+            originX: 'center',
+            originY: 'center'
+        });
+
+        circle.vertexIndex = index;
+        circle.polygonRef = polygon;
+
+        circle.on('moving', function () {
+            const poly = circle.polygonRef;
+            const pathOffset = poly.pathOffset || { x: 0, y: 0 };
+
+            // Convert circle’s absolute position back to polygon local coords
+            const inverted = fabric.util.invertTransform(poly.calcTransformMatrix());
+            const local = fabric.util.transformPoint(
+                new fabric.Point(circle.left, circle.top),
+                inverted
+            );
+
+            poly.points[circle.vertexIndex].x = local.x + pathOffset.x;
+            poly.points[circle.vertexIndex].y = local.y + pathOffset.y;
+            poly.dirty = true;
+            canvas.requestRenderAll();
+        });
+
+        vertexCircles.push(circle);
+        canvas.add(circle);
+    });
+
+    canvas.renderAll();
+}
+
+
+function disablePolygonEditing() {
+    vertexCircles.forEach(c => canvas.remove(c));
+    vertexCircles = [];
+    editingPolygon = null;
+    canvas.renderAll();
+}
+
+// Double-click on polygon to start vertex editing
+canvas.on('mouse:dblclick', function(opt) {
+    const target = opt.target;
+    if (target && target.type === 'polygon' && !isDrawingPolygon) {
+        enablePolygonEditing(target);
+    } else {
+        disablePolygonEditing();
+    }
+});
+
+// Exit edit mode when clicking empty space
+canvas.on('mouse:down', function(opt) {
+    if (!opt.target && editingPolygon) {
+        disablePolygonEditing();
+    }
+});
+
+// Optional: ESC to exit edit mode
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && editingPolygon) {
+        disablePolygonEditing();
+    }
+});
+
+
+
+
+
 
 
 
