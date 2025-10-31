@@ -112,7 +112,6 @@ function saveAnnotation() {
             });
         }
 
-        // ✅ Convert canvas coords → image coords
         const imagePoints = points.map(p => ([
             Math.round((p.x - imageOffsetX) / imageScale),
             Math.round((p.y - imageOffsetY) / imageScale)
