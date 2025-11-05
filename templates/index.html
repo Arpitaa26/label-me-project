@@ -1,118 +1,278 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>LabelMe Web Annotation Tool</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LabelMe Web Annotation Tool</title>
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Load Tailwind CSS for modern aesthetics -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for Sidebar Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- Fabric.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
+  
+  <!-- Preserving original Flask/JS dependencies -->
+  <script>
+    let selectedOnLoad = '{{ request.args.get("selected") or "" }}';
+  </script>
+  <!-- Assuming annotation.js contains all the necessary logic (like activateRect, saveAnnotation, and image loading) -->
+  <script src="{{ url_for('static', filename='js/annotation.js') }}" defer></script>
 
-    <!-- Fabric.js -->
-    <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
+  <style>
+    /* Custom styles for the clean, app-like UI */
+    :root {
+      --primary-bg: #0f1c48;
+      --accent-color: #4cc9f0;
+      --light-bg: #f4f6fa;
+      --canvas-border: #9b59b6; /* Distinct color for canvas border */
+    }
 
-    <!-- Your Annotation Script -->
-    <script>
-        let selectedOnLoad = '{{ request.args.get("selected") or "" }}';
-    </script>
-    <script src="{{ url_for('static', filename='js/annotation.js') }}" defer></script>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--light-bg);
+      overflow: hidden; /* Prevent body scrollbars */
+    }
 
-    <!-- Custom Styling -->
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', sans-serif;
-            padding-top: 40px;
-            text-align: center;
-        }
+    /* --- Layout Wrapper (Full Screen) --- */
+    .app-wrapper {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
 
-        h1 {
-            font-weight: 700;
-            margin-bottom: 30px;
-        }
+    /* --- Sidebar (Tools) --- */
+    .sidebar {
+      width: 80px;
+      background: var(--primary-bg);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      box-shadow: 6px 0 12px rgba(0, 0, 0, 0.15);
+      z-index: 20;
+    }
 
-        form {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            max-width: 900px;
-            margin: auto;
-        }
+    .tool-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: white;
+      text-align: center;
+      margin: 8px 0;
+      padding: 10px 0;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 6px;
+    }
 
-        label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            display: block;
-        }
+    .tool-btn i {
+      font-size: 22px;
+      display: block;
+      margin-bottom: 3px;
+    }
 
-        input[type="file"] {
-            margin-bottom: 10px;
-        }
+    .tool-btn span {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
 
-        button {
-            height: 40px;
-        }
+    .tool-btn:hover, .tool-btn.active {
+      background-color: rgba(76, 201, 240, 0.2); /* var(--accent-color) with opacity */
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+      transform: scale(1.05);
+    }
 
-        canvas {
-            border: 2px dashed #6c757d;
-            margin: 30px auto;
-            display: block;
-            background-color: transparent;
-            margin-left: 176px;
-        }
+    /* --- Main Section (Topbar + Canvas) --- */
+    .main-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-        .save-btn {
-            margin-top: 50px;
-        }
+    /* --- Top Navbar (Form Area) --- */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      height: 90px;
+      padding: 0 20px;
+      z-index: 10;
+    }
 
-        .d-flex.align-items-center {
-            margin-top: 17px !important;
-        }
-    </style>
+    /* The form itself */
+    #uploadForm {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 10px 25px;
+      border-radius: 8px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--primary-bg);
+      font-size: 14px;
+    }
+
+    /* Standard file input styling */
+    .form-control {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      width: 220px; /* Consistent width */
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .form-control:hover {
+        border-color: var(--accent-color);
+    }
+    
+    .upload-btn {
+      background-color: var(--primary-bg);
+      border: none;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 6px;
+      transition: 0.3s;
+      cursor: pointer;
+      font-weight: 600;
+      align-self: flex-end; /* Align button to the bottom of the group */
+      margin-bottom: 4px;
+    }
+
+    .upload-btn:hover {
+      background-color: var(--accent-color);
+      box-shadow: 0 4px 10px rgba(0, 4, 65, 0.4);
+    }
+
+    .canvas-container {
+      flex: 1;
+      background-color: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: auto; 
+      padding: 20px;
+    }
+
+    #canvas {
+      border: 3px dashed var(--canvas-border);
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      /* width: 1000px; 
+      height: 700px;
+      max-width: 95%; 
+      max-height: 95%;  */
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 60px;
+        padding: 10px 0;
+      }
+      .tool-btn i {
+        font-size: 18px;
+      }
+      .tool-btn span {
+        display: none; 
+      }
+      .top-nav {
+        height: auto;
+        padding: 15px;
+      }
+      #uploadForm {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+      }
+      .form-group {
+        width: 100%;
+      }
+      .form-control {
+        width: 100%;
+      }
+      .upload-btn {
+          width: 100%;
+          align-self: center;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <h1>Image Annotation Tool</h1>
-
-    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-        <div>
-            <label>Select Image:</label>
-            <input type="file" name="image" accept="image/*" class="form-control">
-        </div>
-        <div>
-            <label>Annotation (optional):</label>
-            <input type="file" name="annotation" accept=".json" class="form-control">
-        </div>
-        <div class="d-flex align-items-center">
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </div>
-    </form>
-    <div class="container">
-        <div class="row">
-            <div>
-                <button onclick="activateRect()">Rectangle</button>
-                <button onclick="activatePoly()">Polygon</button>
-                <!-- ✅ New Buttons -->
-                <button onclick="duplicatePolygon()">Duplicate Polygon</button>
-                <button onclick="undoAction()">Undo</button>
-                <button onclick="deleteP()">Delete Polygon</button>
-            </div>
-
-            <div class="canvas-box">
-                <canvas id="canvas" width="800" height="600" style=" margin-left: 176px !important;"></canvas>
-            </div>
-
-
-            <div class="save-btn">
-                <button onclick="saveAnnotation()" class="btn btn-success">Save Annotation</button>
-            </div>
-        </div>
+  <div class="app-wrapper">
+    <!-- Sidebar (Tool Control Logic) -->
+    <div class="sidebar">
+      <!-- Buttons retained from index.html logic: activateRect(), activatePoly(), etc. -->
+      <button class="tool-btn" onclick="activateRect()" title="Draw Rectangle">
+        <i class="fa-regular fa-square"></i><span>Rect</span>
+      </button>
+      <button class="tool-btn" onclick="activatePoly()" title="Draw Polygon">
+        <i class="fa-solid fa-draw-polygon"></i><span>Poly</span>
+      </button>
+      <button class="tool-btn" onclick="duplicatePolygon()" title="Duplicate Polygon">
+        <i class="fa-solid fa-copy"></i><span>Dup</span>
+      </button>
+      <button class="tool-btn" onclick="undoAction()" title="Undo Last Action">
+        <i class="fa-solid fa-rotate-left"></i><span>Undo</span>
+      </button>
+      <button class="tool-btn" onclick="deleteP()" title="Delete Selected Shape">
+        <i class="fa-solid fa-trash"></i><span>Del</span>
+      </button>
+      <button class="tool-btn" onclick="saveAnnotation()" title="Save Annotation JSON">
+        <i class="fa-solid fa-floppy-disk"></i><span>Save</span>
+      </button>
     </div>
 
-</body>
+    <!-- Main Section -->
+    <div class="main-section">
+      <!-- Top Navbar (Upload Logic) -->
+      <div class="top-nav">
+        <!-- Form structure retained from index.html logic -->
+        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+          
+          <div class="form-group">
+            <label>Select Image:</label>
+            <input type="file" name="image" accept="image/*" class="form-control" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Annotation (optional):</label>
+            <input type="file" name="annotation" accept=".json" class="form-control">
+          </div>
+          
+          <!-- Upload Button for Form Submission -->
+          <button type="submit" class="upload-btn">
+            <i class="fa-solid fa-upload mr-2"></i>Upload
+          </button>
+          
+        </form>
+      </div>
 
+      <!-- Canvas Area -->
+      <div class="canvas-container">
+        <!-- Canvas element retained from index.html logic -->
+        <canvas id="canvas" width="1350" height="600"></canvas>
+      </div>
+    </div>
+  </div>
+</body>
 </html>
